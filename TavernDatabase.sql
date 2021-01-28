@@ -1,3 +1,6 @@
+drop table if exists RoomStatus;
+drop table if exists Rooms;
+drop table if exists RoomStay;
 drop table if exists GuestClassLvl;
 drop table if exists Class;
 drop table if exists SupplySales;
@@ -84,7 +87,7 @@ create table[Supplies](
 	SupplyID int identity(1,1),
 	SupplyName varChar(50),
 	Unit varChar(50),
-	Cost float,
+	Cost smallmoney,
 	UnitDescription varChar(250)
 	);
 
@@ -214,7 +217,7 @@ create table GuestStatus(
 create table Guests(
 	GuestID int identity(1,1),
 	GuestName varchar(50),
-	Notes varchar(500),
+	Notes varchar(200),
 	Birthday date,
 	Cakeday date,
 	GuestStatusID int
@@ -225,14 +228,16 @@ create table Guests(
 		('Leeroy Jenkins', 'Absolute savage', '1982-07-14', '1997-11-06', 3),
 		('Invader Zim', 'Out of this world', '2000-05-11', '2005-02-20', 4),
 		('Skimpy', 'Very average and nothing special', '1993-07-02', '2011-06-18', 2),
-		('Hasty', 'He is fast', '2008-10-05', '2015-01-26', 5)
+		('Hasty', 'He is fast', '2008-10-05', '2015-01-26', 5),
+		('The Dirty Bubble', 'Evil.', '1998-06-22', '2009-08-01', 1),
+		('Missappear', 'Now you see her', '2002-02-15', '2009-09-23', 2)
 
 
 create table[Sales](
 	SaleID int identity(1,1),
 	ServiceID int,
 	GuestID int,
-	Price float,
+	Price smallmoney,
 	DatePurchased date,
 	AmtPurchased int,
 	TavernID int
@@ -244,7 +249,15 @@ create table[Sales](
 		(1, 3, 10.75, '2020-02-27', 1, 1),
 		(4, 1, 50.00, '2020-12-27', 2, 3),
 		(2, 4, 25.50, '2021-01-03', 1, 5),
-		(5, 3, 20.00, '2020-04-17', 1, 2)
+		(5, 3, 20.00, '2020-04-17', 1, 2),
+		(2, 5, 18.40, '2019-06-09', 3, 4),
+		(4, 1, 43.25, '2018-01-25', 2, 3),
+		(3, 6, 22.20, '2020-08-15', 1, 2),
+		(1, 2, 45.90, '2017-04-08', 2, 4),
+		(5, 5, 46.75, '2018-10-16', 2, 5),
+		(1, 3, 28.25, '2019-05-11', 3, 2),
+		(2, 6, 33.99, '2018-03-25', 1, 3),
+		(4, 4, 25.75, '2017-06-20', 2, 4)
 
 
 create table SupplySales(
@@ -253,8 +266,8 @@ create table SupplySales(
 	SupplyID int,
 	Unit varChar(20),
 	Amt int,
-	UnitSale float,
-	TotalSales float
+	UnitSale smallmoney,
+	TotalSales smallmoney
 	);
 
 	insert into SupplySales(TavernID, SupplyID, Unit, Amt, UnitSale, TotalSales)
@@ -295,7 +308,71 @@ create table GuestClassLvl(
 		(4, 1, 50),
 		(2, 5, 12),
 		(2, 2, 31)
+
+
+CREATE TABLE RoomStatus(
+	RoomStatusID int identity(1,1),
+	[Status] varchar(20)
+	);
+
+	INSERT INTO RoomStatus([Status])
+	VALUES
+		('Available'),
+		('Occupied'),
+		('Not Available')
+
+
+CREATE TABLE Rooms(
+	RoomID int,
+	TavernID int,
+	RoomStatusID int,
+	);
+
+	INSERT INTO Rooms(RoomID, TavernID, RoomStatusID)
+	VALUES
+		(1, 1, 2),
+		(2, 1, 1),
+		(3, 1, 2),
+		(4, 1, 1),
+		(1, 2, 1),
+		(2, 2, 1),
+		(3, 2, 2),
+		(4, 2, 3),
+		(1, 3, 2),
+		(2, 3, 2),
+		(3, 3, 1),
+		(1, 4, 1),
+		(2, 4, 2),
+		(3, 4, 1),
+		(4, 4, 1),
+		(1, 5, 1),
+		(2, 5, 2),
+		(3, 5 ,2),
+		(1, 6, 1),
+		(2, 6, 2),
+		(3, 6, 3)
+
+
+CREATE TABLE RoomStay(
+	GuestID int,
+	TavernID int,
+	RoomID int,
+	DateStayed date,
+	Rate smallmoney
+	);
 	
+	INSERT INTO RoomStay(GuestID, TavernID, RoomID, DateStayed, Rate)
+	VALUES 
+		(1, 3, 2, '2010-10-11', 120),
+		(1, 3, 2, '2010-10-12', 120),
+		(2, 1, 4, '2015-06-19', 150),
+		(2, 1, 4, '2015-06-20', 150),
+		(2, 1, 4, '2015-06-21', 150),
+		(3, 1, 1, '2012-04-03', 150),
+		(3, 1, 1, '2012-04-04', 150),
+		(4, 4, 3, '2019-09-14', 90),
+		(4, 4, 3, '2019-09-15', 90),
+		(4, 4, 3, '2019-09-16', 90)
 
 
 alter table Taverns ADD PRIMARY KEY([TavernID])
@@ -358,5 +435,65 @@ values (8, 4, 2)
 insert into TavernServices(TavernID, ServiceID, StatusID)
 values (1, 4, 4)
 */
+
+
+
+
+SELECT CONCAT('CREATE TABLE ', TABLE_NAME, ' (') FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Supplies'
+UNION ALL
+SELECT CONCAT(COLUMN_NAME,' ', DATA_TYPE, CASE CHARACTER_MAXIMUM_LENGTH
+												WHEN NULL THEN ','
+												ELSE CONCAT('(', (SELECT CHARACTER_MAXIMUM_LENGTH), '),')
+												END
+												FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Supplies'
+UNION ALL
+SELECT ');'
+
+
+
+
+
+SELECT Birthday FROM Guests WHERE Birthday < '2000'
+
+SELECT DISTINCT TavernID, RoomID, Rate FROM RoomStay WHERE Rate > 100
+
+SELECT DISTINCT GuestName FROM Guests
+
+SELECT GuestName FROM Guests ORDER BY GuestName ASC
+
+SELECT TOP(10) Price FROM Sales ORDER BY Price DESC
+
+SELECT * FROM Locations
+UNION ALL
+SELECT * FROM [Services]
+UNION ALL
+SELECT * FROM ServiceStatus
+UNION ALL
+SELECT * FROM GuestStatus
+UNION ALL
+SELECT * FROM Class
+UNION ALL
+SELECT * FROM RoomStatus
+
+SELECT ClassID, Lvl, (CASE
+						WHEN Lvl <= 20 THEN '1-20'
+						WHEN Lvl <= 40 THEN '21-40'
+						WHEN Lvl <= 60 THEN '41-60'
+						END) AS LvlGroup FROM GuestClassLvl
+
+
+/*
+INSERT INTO GuestStatus (GuestStatusID, StatusName)
+SELECT StatusID, [Status] 
+FROM ServiceStatus
+*/
+
+SELECT CONCAT('INSERT INTO ', TABLE_NAME, ' (',(SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'GuestStatus'),
+ ', ', (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'GuestStatus' AND ORDINAL_POSITION = 2), ')') FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'GuestStatus'
+ UNION ALL
+SELECT CONCAT('SELECT ', (SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ServiceStatus'), ', ',
+ (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ServiceStatus' AND ORDINAL_POSITION = 2))
+ UNION ALL
+SELECT CONCAT('FROM ', (SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ServiceStatus'))
 
 
