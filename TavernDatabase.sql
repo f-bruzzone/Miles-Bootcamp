@@ -61,26 +61,34 @@ create table[Roles](
 		('Chef', 'Prepares food for customers.'),
 		('Server', 'Serves the guests drinks and food. Cleans tables.'),
 		('Housekeeper', 'Tends to the guestrooms, and keeps track of occupied lodgings.'),
-		('Janitor', 'Maintains the buildings overall cleanliness.')
+		('Janitor', 'Maintains the buildings overall cleanliness.'),
+		('Admin', 'Overseer of the tavern.')
 
 
 create table[Users](
 	UserID int identity(1,1),
+	TavernID int,
 	UserName varChar(50),
 	Birthday date,
 	RoleID int,
 	);
 
-	insert into Users(UserName, Birthday, RoleID)
+	insert into Users(TavernID, UserName, Birthday, RoleID)
 	values
-		('John Wick', '1983-04-16', 2),
-		('Ragnaros', '1990-09-03', 1),
-		('Domo', '1978-05-18', 4),
-		('Baron Geddon', '1995-01-28', 3),
-		('Garr', '1988-05-12', 5),
-		('Shazzrah', '2001-11-19', 3),
-		('Lucifron', '1966-03-25', 2),
-		('Golemagg', '1972-06-22', 1)
+		(2, 'John Wick', '1983-04-16', 2),
+		(1, 'Ragnaros', '1990-09-03', 6),
+		(5, 'Domo', '1978-05-18', 4),
+		(3, 'Baron Geddon', '1995-01-28', 3),
+		(6, 'Garr', '1988-05-12', 5),
+		(3, 'Shazzrah', '2001-11-19', 3),
+		(2, 'Lucifron', '1966-03-25', 2),
+		(5, 'Golemagg', '1972-06-22', 1),
+		(4, 'Razorgore', '1991-07-20', 6),
+		(2, 'Vael', '2001-02-14', 3),
+		(6, 'Broodlord', '1988-11-24', 6),
+		(1, 'Ebonroc', '1999-05-17', 1),
+		(2, 'Nefarian', '1968-03-08', 6)
+
 
 
 create table[Supplies](
@@ -307,7 +315,9 @@ create table GuestClassLvl(
 		(4, 3, 35),
 		(4, 1, 50),
 		(2, 5, 12),
-		(2, 2, 31)
+		(2, 2, 31),
+		(6, 5, 22),
+		(5, 2, 09)
 
 
 CREATE TABLE RoomStatus(
@@ -437,21 +447,7 @@ values (1, 4, 4)
 */
 
 
-
-
-SELECT CONCAT('CREATE TABLE ', TABLE_NAME, ' (') FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Supplies'
-UNION ALL
-SELECT CONCAT(COLUMN_NAME,' ', DATA_TYPE, CASE CHARACTER_MAXIMUM_LENGTH
-												WHEN NULL THEN ','
-												ELSE CONCAT('(', (SELECT CHARACTER_MAXIMUM_LENGTH), '),')
-												END
-												FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Supplies'
-UNION ALL
-SELECT ');'
-
-
-
-
+/*
 
 SELECT Birthday FROM Guests WHERE Birthday < '2000'
 
@@ -482,11 +478,7 @@ SELECT ClassID, Lvl, (CASE
 						END) AS LvlGroup FROM GuestClassLvl
 
 
-/*
-INSERT INTO GuestStatus (GuestStatusID, StatusName)
-SELECT StatusID, [Status] 
-FROM ServiceStatus
-*/
+
 
 SELECT CONCAT('INSERT INTO ', TABLE_NAME, ' (',(SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'GuestStatus'),
  ', ', (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'GuestStatus' AND ORDINAL_POSITION = 2), ')') FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'GuestStatus'
@@ -496,4 +488,68 @@ SELECT CONCAT('SELECT ', (SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUM
  UNION ALL
 SELECT CONCAT('FROM ', (SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ServiceStatus'))
 
+*/
 
+
+/*	:::::::: Homework 4 :::::::::: */
+
+/* 1 */
+SELECT UserName FROM Users WHERE RoleID = 6
+
+/* 2 */
+SELECT UserName, Users.TavernID, Taverns.TavernName, Locations.LocationName FROM Users JOIN Taverns ON (USERS.TavernID = Taverns.TavernID) 
+JOIN Locations ON (Taverns.LocationID = Locations.LocationID) WHERE RoleID = 6
+
+/* 3 */
+SELECT GuestClassLvl.ClassID, Lvl, Guests.GuestName, Class.ClassName FROM GuestClassLvl JOIN Guests ON (GuestClassLvl.GuestID = Guests.GuestID)
+JOIN Class ON (GuestClassLvl.ClassID = Class.ClassID)
+ORDER BY GuestName ASC
+
+/* 4 */
+SELECT TOP(10) Price, [Services].TavernService FROM Sales JOIN [Services] ON (Sales.ServiceID = [Services].ServiceID) ORDER BY Price DESC
+
+/* 5 */
+SELECT GuestName, COUNT(ClassID) AS MultiClasses FROM GuestClassLvl JOIN Guests ON(Guests.GuestID = GuestClassLvl.GuestID) GROUP BY GuestName HAVING COUNT(ClassID) >= 2
+
+/* 6 */
+SELECT GuestName, COUNT(ClassID) AS MultiClasses FROM GuestClassLvl JOIN Guests ON(Guests.GuestID = GuestClassLvl.GuestID) WHERE Lvl > 5 GROUP BY GuestName HAVING COUNT(ClassID) >= 2
+
+/* 7 */
+SELECT GuestName, MAX(Lvl) AS HighestLvl FROM GuestClassLvl JOIN Guests ON (GuestClassLvl.GuestID = Guests.GuestID) GROUP BY GuestName
+
+/* 8 */
+SELECT GuestName, DateStayed FROM RoomStay JOIN Guests ON (RoomStay.GuestID = Guests.GuestID) WHERE DateStayed BETWEEN '2010-10-12' AND '2015-06-20'
+
+/* 9 */
+SELECT CONCAT('CREATE TABLE ', TABLE_NAME, ' (') AS queryPiece
+FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Supplies'
+UNION ALL
+SELECT CONCAT(cols.COLUMN_NAME,' ', cols.DATA_TYPE, 
+(CASE 
+	WHEN CHARACTER_MAXIMUM_LENGTH IS NULL THEN ''
+	ELSE CONCAT('(', (SELECT CHARACTER_MAXIMUM_LENGTH), ')')
+	END)
+,
+	CASE WHEN refConst.CONSTRAINT_NAME IS NOT NULL
+	THEN
+		(CONCAT('FOREIGN KEY REFERENCES', constKeys.TABLE_NAME, '(', constKeys.COLUMN_NAME, ')'))
+	ELSE ''
+	END
+,
+	CASE WHEN refConst.CONSTRAINT_NAME IS NULL AND keys.COLUMN_NAME IS NOT NULL
+	THEN
+		'PRIMARY KEY'
+	ELSE ''
+	END
+,
+
+',') AS queryPiece FROM INFORMATION_SCHEMA.COLUMNS AS cols
+LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS keys ON
+(keys.TABLE_NAME = cols.TABLE_NAME AND keys.COLUMN_NAME = cols.COLUMN_NAME)
+LEFT JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS AS refConst ON
+(refConst.CONSTRAINT_NAME = keys.CONSTRAINT_NAME)
+LEFT JOIN (SELECT DISTINCT CONSTRAINT_NAME, COLUMN_NAME, TABLE_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE) AS constKeys
+ON (constKeys.CONSTRAINT_NAME = refConst.UNIQUE_CONSTRAINT_NAME)
+WHERE cols.TABLE_NAME = 'Supplies'
+UNION ALL
+SELECT')'
