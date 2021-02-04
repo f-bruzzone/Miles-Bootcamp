@@ -307,13 +307,13 @@ create table GuestClassLvl(
 
 	insert into GuestClassLvl (GuestID, ClassID, Lvl)
 	values
-		(3, 4, 55),
+		(3, 4, 2),
 		(3, 1, 60),
-		(1, 4, 60),
+		(1, 4, 5),
 		(1, 5, 44),
 		(4, 2, 27),
 		(4, 3, 35),
-		(4, 1, 50),
+		(4, 1, 8),
 		(2, 5, 12),
 		(2, 2, 31),
 		(6, 5, 22),
@@ -333,34 +333,35 @@ CREATE TABLE RoomStatus(
 
 
 CREATE TABLE Rooms(
-	RoomID int,
+	RoomID int identity(1,1),
 	TavernID int,
 	RoomStatusID int,
+	Rate smallmoney
 	);
 
-	INSERT INTO Rooms(RoomID, TavernID, RoomStatusID)
+	INSERT INTO Rooms(TavernID, RoomStatusID, Rate)
 	VALUES
-		(1, 1, 2),
-		(2, 1, 1),
-		(3, 1, 2),
-		(4, 1, 1),
-		(1, 2, 1),
-		(2, 2, 1),
-		(3, 2, 2),
-		(4, 2, 3),
-		(1, 3, 2),
-		(2, 3, 2),
-		(3, 3, 1),
-		(1, 4, 1),
-		(2, 4, 2),
-		(3, 4, 1),
-		(4, 4, 1),
-		(1, 5, 1),
-		(2, 5, 2),
-		(3, 5 ,2),
-		(1, 6, 1),
-		(2, 6, 2),
-		(3, 6, 3)
+		(1, 2, 150),
+		(1, 1, 150),
+		(1, 2, 110),
+		(1, 1, 110),
+		(2, 1, 160),
+		(2, 1, 140),
+		(2, 2, 140),
+		(2, 3, 100),
+		(3, 2, 150),
+		(3, 2, 120),
+		(3, 1, 115),
+		(4, 1, 90),
+		(4, 2, 100),
+		(4, 1, 110),
+		(4, 1, 85),
+		(5, 1, 180),
+		(5, 2, 160),
+		(5 ,2, 190),
+		(6, 1, 115),
+		(6, 2, 130),
+		(6, 3, 90)
 
 
 CREATE TABLE RoomStay(
@@ -425,6 +426,8 @@ alter table Guests ADD FOREIGN KEY([GuestStatusID]) REFERENCES GuestStatus([Gues
 
 alter table Class ADD PRIMARY KEY([ClassID])
 alter table GuestClassLvl ADD FOREIGN KEY([ClassID]) REFERENCES Class([ClassID])
+
+alter table Rooms ADD PRIMARY KEY([RoomID])
 
 
 /* 
@@ -538,7 +541,7 @@ SELECT CONCAT(cols.COLUMN_NAME,' ', cols.DATA_TYPE,
 ,
 	CASE WHEN refConst.CONSTRAINT_NAME IS NULL AND keys.COLUMN_NAME IS NOT NULL
 	THEN
-		'PRIMARY KEY'
+		' PRIMARY KEY'
 	ELSE ''
 	END
 ,
@@ -553,3 +556,79 @@ ON (constKeys.CONSTRAINT_NAME = refConst.UNIQUE_CONSTRAINT_NAME)
 WHERE cols.TABLE_NAME = 'Supplies'
 UNION ALL
 SELECT')'
+
+
+
+
+/* :::::::: Homework 5 :::::::: */ 
+/* 1 */
+SELECT UserName, RoleName, RoleDescription FROM Users JOIN Roles ON (Users.RoleID = Roles.RoleID)
+
+/* 2 */
+SELECT Class.ClassName, COUNT(Class.ClassID) AS TotalClasses FROM Class JOIN GuestClassLvl ON (Class.ClassID = GuestClassLvl.ClassID) GROUP BY Class.ClassName
+
+/* 3 */
+SELECT GuestName, Class.ClassName, Lvl,
+(CASE
+	WHEN Lvl <= 5 THEN 'Beginner'
+	WHEN Lvl <= 10 THEN 'Intermediate'
+	WHEN Lvl > 10 THEN 'Expert'
+	END) AS Experience FROM Guests
+JOIN GuestClassLvl ON (Guests.GuestID = GuestClassLvl.GuestID)
+JOIN Class ON (GuestClassLvl.ClassID = Class.ClassID) ORDER BY GuestName ASC
+
+/* 4 */
+IF OBJECT_ID(N'dbo.groupLevel', N'FN') IS NOT NULL
+	DROP FUNCTION dbo.groupLevel;
+GO
+CREATE FUNCTION dbo.groupLevel (@Lvl int)
+RETURNS varchar(50)
+AS
+BEGIN
+	DECLARE @group varchar(50);
+	SELECT @group = (CASE
+						WHEN @Lvl <= 5 THEN '1-5'
+						WHEN @Lvl <= 10 THEN '6-10'
+						WHEN @Lvl > 10 THEN '10+'
+						END)
+	FROM GuestClassLvl as g
+	WHERE g.Lvl = @Lvl;
+	IF(@group IS NULL)
+		SET @group = CONCAT('No classes with corresponding Lvl of ', @Lvl);
+	RETURN @group
+END;
+SELECT dbo.groupLevel(12)
+
+/* 5 */
+IF OBJECT_ID(N'dbo.openRooms', N'FN') IS NOT NULL
+	DROP FUNCTION dbo.openRooms;
+GO
+CREATE FUNCTION dbo.openRooms (@date DATE)
+RETURNS TABLE
+AS
+RETURN
+(
+	SELECT s.TavernID, r.RoomID FROM Rooms AS r JOIN RoomStay AS s ON(r.RoomID = s.RoomID) WHERE DateStayed != @date
+);
+	
+/* Not sure how to return ALL rooms. This will only return rooms that have a date associated
+	with them that do not match the date entered into the function */
+SELECT * FROM dbo.openRooms('2010-10-11')
+
+/* 6 */
+IF OBJECT_ID(N'dbo.roomPrice', N'FN') IS NOT NULL
+	DROP FUNCTION dbo.roomPrice;
+GO
+CREATE FUNCTION dbo.roomPrice (@status varchar(20))
+RETURNS TABLE
+AS
+RETURN
+(
+	SELECT TavernID, MAX(Rate) AS MaxRate, MIN(Rate) AS MinRate FROM Rooms AS r JOIN RoomStatus AS s ON (r.RoomStatusID = s.RoomStatusID) WHERE s.Status = @status  GROUP BY TavernID
+);
+/* RoomStay table and Rooms table weren't initially created to handle the query you were actually looking for I think.
+	Instead I ignored the date input and made it return the Max/Min price of rooms where the input is room status ('Available', 'Occupied') */
+SELECT * FROM dbo.roomPrice('Available')
+
+/* 7 */
+SELECT TavernID, MaxRate, MinRate, MinRate - .01 AS Cheapest FROM dbo.roomPrice('Available')
